@@ -1,7 +1,8 @@
 [package]
 name = "stepconverter"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
-cadrum = "0.7.1"
+# cadrum = "0.7.1"
+cadrum = { git = "https://github.com/verylowfreq/cadrum.git" }

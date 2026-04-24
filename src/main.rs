@@ -32,7 +32,6 @@ impl ProgramOptions {
 
         let mut iter = args.iter();
         while let Some(arg) = iter.next() {
-            println!("ARG: {}", arg);
             if arg == "--allow_overwrite" {
                 self.allow_overwrite = true;
             } else if arg == "--tolerance" {
@@ -89,10 +88,17 @@ impl App {
 
     pub fn load_step(&self) -> Result<cadrum::Mesh, String> {
         let mut source = std::fs::File::open(self.options.input_filepath.as_ref().unwrap()).unwrap();
-        let result = cadrum::read_step(&mut source)
+        let solid = cadrum::read_step(&mut source)
             .map_err(|e| format!("{}", e))?;
-
-        return Result::Ok(cadrum::mesh(&result, self.options.tolerance).unwrap());
+        if solid.len() == 0 {
+            return Result::Err("No solid loaded.".into());
+        }
+        let mesh = cadrum::mesh(&solid, self.options.tolerance)
+            .map_err(|e| format!("{}", e))?;
+        if mesh.indices.len() == 0 {
+            return Result::Err("No mesh loaded.".into());
+        }
+        return Result::Ok(mesh);
     }
 
     pub fn export_stl(&self, mesh:&cadrum::Mesh) -> Result<(), String> {
