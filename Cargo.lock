@@ -28,8 +28,9 @@ checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 
 [[package]]
 name = "cadrum"
-version = "0.7.0"
-source = "git+https://github.com/verylowfreq/cadrum.git#14824935f74acb4c884b6e9b8600764ab721ffc8"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fda6e5d3e4fbe50330c6398bba3b9c47ef6d2045c5c88b15b42608074fc0041"
 dependencies = [
  "cxx",
  "cxx-build",
@@ -493,7 +494,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "stepconverter"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cadrum",
 ]
