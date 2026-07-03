@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 
+use cadrum::Tessellation;
+
 
 #[derive(Debug)]
 struct ProgramOptions {
@@ -88,13 +90,18 @@ impl App {
 
     pub fn load_step(&self) -> Result<cadrum::Mesh, String> {
         let mut source = std::fs::File::open(self.options.input_filepath.as_ref().unwrap()).unwrap();
-        let solid = cadrum::read_step(&mut source)
-            .map_err(|e| format!("{}", e))?;
+        let solid = cadrum::Solid::read_step(&mut source)
+                .map_err(|e| format!("{}", e))?;
         if solid.len() == 0 {
             return Result::Err("No solid loaded.".into());
         }
-        let mesh = cadrum::mesh(&solid, self.options.tolerance)
-            .map_err(|e| format!("{}", e))?;
+        let opts = Tessellation {
+            deflection_linear: self.options.tolerance,
+            relative_linear: true,
+            ..Default::default()
+        };
+        let mesh = cadrum::Solid::mesh(&solid, opts)
+                .map_err(|e| format!("{}", e))?;
         if mesh.indices.len() == 0 {
             return Result::Err("No mesh loaded.".into());
         }
@@ -135,7 +142,7 @@ fn main() -> ExitCode{
             return ExitCode::from(2);
         }
     }
-
+    println!("Loading STEP file: {}", app.options.input_filepath.clone().unwrap());
     let mesh = app.load_step();
     if mesh.is_err() {
         eprintln!("{}", mesh.err().unwrap());
@@ -143,6 +150,7 @@ fn main() -> ExitCode{
     }
     let mesh= mesh.unwrap();
 
+    println!("Save STL file: {}", app.options.output_filepath.clone().unwrap());
     let result = app.export_stl(&mesh);
     if result.is_err() {
         eprintln!("{}", result.err().unwrap());
