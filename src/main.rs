@@ -3,12 +3,42 @@ use std::process::ExitCode;
 use cadrum::Tessellation;
 
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputFormat {
+    Stl,
+    Glb,
+}
+
+impl OutputFormat {
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s.to_ascii_lowercase().as_str() {
+            "stl" => Result::Ok(OutputFormat::Stl),
+            "glb" => Result::Ok(OutputFormat::Glb),
+            _ => Result::Err(format!("Unknown output format \"{}\". Supported formats: stl, glb", s)),
+        }
+    }
+
+    pub fn from_extension(filepath: &str) -> Result<Self, String> {
+        let ext = std::path::Path::new(filepath)
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_ascii_lowercase());
+        match ext.as_deref() {
+            Some("stl") => Result::Ok(OutputFormat::Stl),
+            Some("glb") => Result::Ok(OutputFormat::Glb),
+            _ => Result::Err(format!("Could not infer output format from \"{}\". Specify --format stl|glb.", filepath)),
+        }
+    }
+}
+
+
 #[derive(Debug)]
 struct ProgramOptions {
     input_filepath: Option<String>,
     output_filepath: Option<String>,
     allow_overwrite:bool,
     tolerance:f64,
+    format: Option<OutputFormat>,
 }
 
 impl Default for ProgramOptions {
@@ -17,7 +47,8 @@ impl Default for ProgramOptions {
             input_filepath: Option::None,
             output_filepath: Option::None,
             allow_overwrite: false,
-            tolerance: 0.1
+            tolerance: 0.1,
+            format: Option::None,
         }
     }
 }
@@ -46,6 +77,9 @@ impl ProgramOptions {
                 if self.tolerance <= 0.0 {
                     return Result::Err(String::from("specified tolerance is negative value."));
                 }
+            } else if arg == "--format" {
+                let arg = iter.next().ok_or(String::from("Output format value not found."))?;
+                self.format = Some(OutputFormat::parse(arg)?);
             } else {
                 if self.input_filepath.is_none() {
                     self.input_filepath = Option::Some(String::from(arg));
@@ -58,6 +92,13 @@ impl ProgramOptions {
         }
 
         return Result::Ok(());
+    }
+
+    pub fn resolve_format(&self) -> Result<OutputFormat, String> {
+        if let Some(format) = self.format {
+            return Result::Ok(format);
+        }
+        return OutputFormat::from_extension(self.output_filepath.as_ref().unwrap());
     }
 }
 
@@ -84,6 +125,7 @@ impl App {
         if !self.options.allow_overwrite && std::fs::exists(self.options.output_filepath.as_ref().unwrap()).unwrap() {
             return Result::Err(String::from("Output filepath already exists."));
         }
+        self.options.resolve_format()?;
 
         return Result::Ok(());
     }
@@ -108,9 +150,12 @@ impl App {
         return Result::Ok(mesh);
     }
 
-    pub fn export_stl(&self, mesh:&cadrum::Mesh) -> Result<(), String> {
-        let mut stl = std::fs::File::create(self.options.output_filepath.as_ref().unwrap()).expect("create file");
-        mesh.write_stl(&mut stl).map_err(|e| format!("{}", e))?;
+    pub fn export(&self, mesh:&cadrum::Mesh, format: OutputFormat) -> Result<(), String> {
+        let mut file = std::fs::File::create(self.options.output_filepath.as_ref().unwrap()).expect("create file");
+        match format {
+            OutputFormat::Stl => mesh.write_stl(&mut file).map_err(|e| format!("{}", e))?,
+            OutputFormat::Glb => mesh.write_gltf_binary(&mut file).map_err(|e| format!("{}", e))?,
+        }
 
         return Result::Ok(());
     }
@@ -150,8 +195,13 @@ fn main() -> ExitCode{
     }
     let mesh= mesh.unwrap();
 
-    println!("Save STL file: {}", app.options.output_filepath.clone().unwrap());
-    let result = app.export_stl(&mesh);
+    let format = app.options.resolve_format().unwrap();
+    let format_label = match format {
+        OutputFormat::Stl => "STL",
+        OutputFormat::Glb => "GLB",
+    };
+    println!("Save {} file: {}", format_label, app.options.output_filepath.clone().unwrap());
+    let result = app.export(&mesh, format);
     if result.is_err() {
         eprintln!("{}", result.err().unwrap());
         return ExitCode::from(4);
