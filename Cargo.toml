@@ -5,3 +5,9 @@ edition = "2024"
 
 [dependencies]
 cadrum = "0.8.16"
+eframe = "0.33"
+egui = "0.33"
+rfd = "0.17"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Console"] }

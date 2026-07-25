@@ -1,6 +1,10 @@
+#![windows_subsystem = "windows"]
+
 use std::process::ExitCode;
 
 use cadrum::Tessellation;
+
+mod gui;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,14 +59,6 @@ impl Default for ProgramOptions {
 
 impl ProgramOptions {
     pub fn parse(&mut self, args:&[String]) -> Result<(), String> {
-        if args.len() == 1 {
-            // Special case.
-            self.allow_overwrite = true;
-            self.input_filepath = Some(args[0].clone());
-            self.output_filepath = Some(format!("{}.stl", args[0]));
-            return Result::Ok(());
-        }
-
         let mut iter = args.iter();
         while let Some(arg) = iter.next() {
             if arg == "--allow_overwrite" {
@@ -160,20 +156,43 @@ impl App {
         return Result::Ok(());
     }
 
-    pub fn print_result(&self, mesh:&cadrum::Mesh) {
+    pub fn format_result(&self, mesh:&cadrum::Mesh) -> String {
         let input_filesize = std::fs::metadata(self.options.input_filepath.as_ref().unwrap()).unwrap().len();
         let output_filesize = std::fs::metadata(self.options.output_filepath.as_ref().unwrap()).unwrap().len();
         let mesh_count = mesh.indices.len() / 3;
-        println!("Input File Size: {} bytes", input_filesize);
-        println!("Write to \"{}\"", self.options.output_filepath.as_ref().unwrap());
-        println!("Output File Size: {} bytes", output_filesize);
-        println!("Mesh count: {}", mesh_count);
+        format!(
+            "Input File Size: {} bytes\nWrite to \"{}\"\nOutput File Size: {} bytes\nMesh count: {}",
+            input_filesize,
+            self.options.output_filepath.as_ref().unwrap(),
+            output_filesize,
+            mesh_count
+        )
+    }
+
+    pub fn print_result(&self, mesh:&cadrum::Mesh) {
+        println!("{}", self.format_result(mesh));
     }
 }
 
 
+#[cfg(windows)]
+fn attach_parent_console() {
+    use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    unsafe { AttachConsole(ATTACH_PARENT_PROCESS); }
+}
+
+#[cfg(not(windows))]
+fn attach_parent_console() {}
+
 fn main() -> ExitCode{
     let args = std::env::args().skip(1).collect::<Vec<String>>();
+
+    let is_gui_mode = args.is_empty() || (args.len() == 1 && !args[0].starts_with("--"));
+    if is_gui_mode {
+        return gui::run(args.get(0).cloned());
+    }
+    attach_parent_console();
+
     let mut app = App::new();
     let result = app.options.parse(&args);
     if result.is_err() {

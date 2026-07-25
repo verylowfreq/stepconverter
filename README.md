@@ -9,14 +9,20 @@ Simple STEP Converter is a step-to-stl/glb converter. Color information is prese
 
 ## 使い方 / Usage
 
-デフォルト設定を利用して、STEPファイル ("INPUT.step") を INPUT.step.stl へ出力します。
-この場合、トレランスは0.1、出力ファイルは存在すれば上書きされます。
+### GUI
+
+引数なしで起動する、または入力STEPファイル名だけを渡して起動すると、GUIウィンドウが開きます。
 
 ```
+stepconverter.exe
 stepconverter.exe INPUT.step
 ```
 
-出力ファイル名の指定、トレランスの指定、上書きの許可をするには、以下のようにします。
+GUI上で入力ファイル・出力ファイル・出力形式（STL/GLB）・トレランス・上書き許可を設定して変換できます。
+
+### CLI
+
+出力ファイル名やオプションを指定して起動すると、GUIを開かずコマンドラインで処理されます。
 
 ```
 stepconverter.exe INPUT.step OUTPUT.stl --tolerance 0.05 --allow_overwrite
